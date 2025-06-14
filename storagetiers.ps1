@@ -16,21 +16,36 @@ $driveLetter = "T"             # Drive letter to mount the new volume
 $existingPools = Get-StoragePool -ErrorAction SilentlyContinue | Where-Object { $_.FriendlyName -eq $poolName }
 if ($existingPools) {
     foreach ($pool in $existingPools) {
-        Write-Host "⚠️ Removing existing pool: $($pool.FriendlyName)"
-        
-        # Remove all virtual disks linked to this pool
-        $vdisks = Get-VirtualDisk | Where-Object { $_.ObjectId -like "*$($pool.ObjectId)*" }
+        Write-Warning "⚠️ Storage pool '$($pool.FriendlyName)' already exists."
+
+        # Prompt for destructive confirmation
+        $confirm = Read-Host "‼️ Do you want to delete all virtual disks in this pool? This will permanently destroy data. Type YES to continue"
+        if ($confirm -ne "YES") {
+            Write-Host "❌ Aborting. Storage pool removal canceled."
+            exit
+        }
+
+        # Manually match virtual disks by storage pool unique ID
+        $vdisks = Get-VirtualDisk | Where-Object {
+            $_.ObjectId -like "*$($pool.UniqueId)*"
+        }
+
         foreach ($vd in $vdisks) {
+            Write-Host "🗑 Removing virtual disk: $($vd.FriendlyName)"
             Remove-VirtualDisk -FriendlyName $vd.FriendlyName -Confirm:$false
         }
 
-        # Set pool to writable and remove
+        Start-Sleep -Seconds 2
+
+        # Make pool writable and remove it
+        Write-Host "🗑 Removing storage pool: $($pool.FriendlyName)"
         $pool | Set-StoragePool -IsReadOnly $false
         $pool | Remove-StoragePool -Confirm:$false
     }
 
     Start-Sleep -Seconds 3
 }
+
 
 # === DETECT STORAGE SUBSYSTEM ===
 $subsystem = Get-StorageSubSystem | Where-Object { $_.FriendlyName -like "Windows Storage*" }
@@ -101,6 +116,9 @@ Initialize-Disk -Number $disk.Number -PartitionStyle GPT
 
 New-Partition -DiskNumber $disk.Number -UseMaximumSize -DriveLetter $driveLetter |
     Format-Volume -FileSystem NTFS -NewFileSystemLabel $spaceName -Confirm:$false
+
+# === OPTIONAL: UPGRADE POOL TO NEWEST FORMAT (non-destructive) ===
+Update-StoragePool -FriendlyName $poolName -ErrorAction SilentlyContinue
 
 # === SUCCESS MESSAGE ===
 Write-Host "`n✅ Tiered Storage Space '$spaceName' created and mounted as ${driveLetter}:"
