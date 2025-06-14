@@ -1,7 +1,7 @@
 # ================================
 # Tiered Storage Pool Creator.ps1
 # ================================
-# Author: [Your Name]
+# Author: [Trizzd0319]
 # Description:
 #   Automatically creates a tiered Storage Spaces pool using both SSD and HDD disks.
 #   Applies interleave, calculates optimal sizes, formats, and mounts the volume.
