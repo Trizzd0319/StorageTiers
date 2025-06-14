@@ -34,4 +34,4 @@ This PowerShell script automatically creates a **tiered Storage Spaces pool** us
 
 1. Clone the repo or download the script:
    ```bash
-   git clone https://github.com/yourname/tiered-storage-pool
+   git clone https://github.com/Trizzd03139/StorageTiers
